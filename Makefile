@@ -41,8 +41,8 @@ all: identify $(TARGET)
 
 # FlexCat build
 flexcat:
-	$(MAKE) -C 3rdparty/flexcat bootstrap OS=unix HOST=Linux
-	$(MAKE)	-C 3rdparty/flexcat OS=unix HOST=Linux DEBUGSYM=-g
+	$(MAKE) -C 3rdparty/flexcat bootstrap
+	$(MAKE)	-C 3rdparty/flexcat
 
 # Identify library build (requires FlexCat)
 identify: flexcat

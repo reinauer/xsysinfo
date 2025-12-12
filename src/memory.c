@@ -111,7 +111,7 @@ void enumerate_memory_regions(void)
 
         MemoryRegion *region = &memory_regions.regions[memory_regions.count];
 
-        region->start_address = (APTR)((ULONG)mh->mh_Lower & 0xffffc000);
+        region->start_address = (APTR)((ULONG)mh->mh_Lower & 0xffff8000);
         region->end_address = mh->mh_Upper - 1;
         region->total_size = (ULONG)(mh->mh_Upper - region->start_address);
         region->mem_type = mh->mh_Attributes;

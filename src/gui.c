@@ -342,15 +342,16 @@ static void draw_header(void)
     /* Title text */
     SetAPen(rp, COLOR_HIGHLIGHT);
     SetBPen(rp, COLOR_PANEL_BG);
-    Move(rp, 8, 9);
-    snprintf(buffer, sizeof(buffer), "xSYSINFO %s An Amiga System Information Program",
-             XSYSINFO_VERSION);
+    snprintf(buffer, sizeof(buffer), XSYSINFO_NAME " %s - %s",
+             XSYSINFO_VERSION, get_string(MSG_TAGLINE));
+    Move(rp, (80 - strlen(buffer)) * 8 / 2, 9);
     Text(rp, (CONST_STRPTR)buffer, strlen(buffer));
 
     /* Subtitle */
     SetAPen(rp, COLOR_TEXT);
-    Move(rp, 8, 19);
-    snprintf(buffer, sizeof(buffer), "Contact: %s", get_string(MSG_CONTACT));
+    snprintf(buffer, sizeof(buffer), "%s https://github.com/reinauer/xsysinfo",
+             get_string(MSG_CONTACT_LABEL));
+    Move(rp, (80 - strlen(buffer)) * 8 / 2, 19);
     Text(rp, (CONST_STRPTR)buffer, strlen(buffer));
 }
 

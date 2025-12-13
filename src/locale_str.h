@@ -8,10 +8,9 @@
 
 /* String IDs for localization */
 typedef enum {
-    /* Main window title and header */
-    MSG_TITLE,
-    MSG_SUBTITLE,
-    MSG_CONTACT,
+    /* Header strings (app name/URL are hardcoded, not localized) */
+    MSG_TAGLINE,
+    MSG_CONTACT_LABEL,
 
     /* Section headers */
     MSG_SYSTEM_SOFTWARE,

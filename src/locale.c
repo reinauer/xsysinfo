@@ -8,9 +8,8 @@
 
 /* Default English strings */
 static const char *default_strings[MSG_COUNT] = {
-    /* MSG_TITLE */             "xSysInfo",
-    /* MSG_SUBTITLE */          "V" XSYSINFO_VERSION " An Amiga System Information Program",
-    /* MSG_CONTACT */           "https://github.com/reinauer/xsysinfo",
+    /* MSG_TAGLINE */           "An Amiga System Information Program",
+    /* MSG_CONTACT_LABEL */     "Contact:",
 
     /* Section headers */
     /* MSG_SYSTEM_SOFTWARE */   "SYSTEM SOFTWARE INSTALLED",

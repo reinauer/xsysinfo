@@ -385,7 +385,7 @@ static BOOL open_display(void)
         app->use_custom_screen = FALSE;
 
         app->window = OpenWindowTags(NULL,
-            WA_Title, (ULONG)"xSysInfo " XSYSINFO_VERSION,
+            WA_Title, (ULONG)XSYSINFO_NAME " " XSYSINFO_VERSION,
             WA_InnerWidth, SCREEN_WIDTH,
             WA_InnerHeight, app->screen_height,
             WA_IDCMP, IDCMP_CLOSEWINDOW | IDCMP_MOUSEBUTTONS |
@@ -412,7 +412,7 @@ static BOOL open_display(void)
             SA_Width, SCREEN_WIDTH,
             SA_Height, app->screen_height,
             SA_Depth, SCREEN_DEPTH,
-            SA_Title, (ULONG)"xSysInfo " XSYSINFO_VERSION,
+            SA_Title, (ULONG)XSYSINFO_NAME " " XSYSINFO_VERSION,
             SA_Type, CUSTOMSCREEN,
             SA_Font, (ULONG)&Topaz8Font,
             SA_DisplayID, HIRES_KEY,

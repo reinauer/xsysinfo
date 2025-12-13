@@ -105,7 +105,7 @@ void enumerate_memory_regions(void)
     Forbid();
 
     for (mh = (struct MemHeader *)SysBase->MemList.lh_Head;
-         mh->mh_Node.ln_Succ != NULL;
+         (struct Node *)mh != (struct Node *)&SysBase->MemList.lh_Tail;
          mh = (struct MemHeader *)mh->mh_Node.ln_Succ) {
 
         if (memory_regions.count >= MAX_MEMORY_REGIONS) break;
@@ -155,7 +155,7 @@ void refresh_memory_region(ULONG index)
     Forbid();
 
     for (mh = (struct MemHeader *)SysBase->MemList.lh_Head;
-         mh->mh_Node.ln_Succ != NULL;
+         (struct Node *)mh != (struct Node *)&SysBase->MemList.lh_Tail;
          mh = (struct MemHeader *)mh->mh_Node.ln_Succ) {
 
         if (i == index) {

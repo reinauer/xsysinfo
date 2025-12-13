@@ -90,7 +90,7 @@ void enumerate_libraries(void)
     Forbid();
 
     for (lib = (struct Library *)SysBase->LibList.lh_Head;
-         lib->lib_Node.ln_Succ != NULL;
+         (struct Node *)lib != (struct Node *)&SysBase->LibList.lh_Tail;
          lib = (struct Library *)lib->lib_Node.ln_Succ) {
 
         if (libraries_list.count >= MAX_SOFTWARE_ENTRIES) break;
@@ -128,7 +128,7 @@ void enumerate_devices(void)
     Forbid();
 
     for (dev = (struct Device *)SysBase->DeviceList.lh_Head;
-         dev->dd_Library.lib_Node.ln_Succ != NULL;
+         (struct Node *)dev != (struct Node *)&SysBase->DeviceList.lh_Tail;
          dev = (struct Device *)dev->dd_Library.lib_Node.ln_Succ) {
 
         if (devices_list.count >= MAX_SOFTWARE_ENTRIES) break;
@@ -167,7 +167,7 @@ void enumerate_resources(void)
     Forbid();
 
     for (res = (struct Library *)SysBase->ResourceList.lh_Head;
-         res->lib_Node.ln_Succ != NULL;
+         (struct Node *)res != (struct Node *)&SysBase->ResourceList.lh_Tail;
          res = (struct Library *)res->lib_Node.ln_Succ) {
 
         if (resources_list.count >= MAX_SOFTWARE_ENTRIES) break;

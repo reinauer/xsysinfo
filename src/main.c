@@ -11,12 +11,15 @@
 #include <graphics/displayinfo.h>
 #include <libraries/identify.h>
 #include <dos/rdargs.h>
+#include <workbench/startup.h>
+#include <workbench/workbench.h>
 
 #include <proto/exec.h>
 #include <proto/intuition.h>
 #include <proto/graphics.h>
 #include <proto/dos.h>
 #include <proto/identify.h>
+#include <proto/icon.h>
 
 #include "xsysinfo.h"
 #include "gui.h"
@@ -34,6 +37,10 @@ extern struct ExecBase *SysBase;
 struct IntuitionBase *IntuitionBase = NULL;
 struct GfxBase *GfxBase = NULL;
 struct Library *IdentifyBase = NULL;
+struct Library *IconBase = NULL;
+
+/* Workbench startup message (if started from WB) */
+static struct WBStartup *wb_startup = NULL;
 
 /* Global debug flag */
 BOOL g_debug_enabled = FALSE;
@@ -80,6 +87,7 @@ static void close_display(void);
 static void main_loop(void);
 static void set_palette(void);
 static BOOL is_rtg_mode(struct Screen *screen);
+static void parse_tooltypes(void);
 
 /*
  * Parse command line arguments
@@ -106,17 +114,65 @@ static BOOL parse_args(void)
 }
 
 /*
+ * Parse icon tooltypes when started from Workbench
+ */
+static void parse_tooltypes(void)
+{
+    struct DiskObject *dobj;
+    char **tooltypes;
+    char *value;
+    BPTR old_dir;
+
+    if (!wb_startup || !IconBase) {
+        return;
+    }
+
+    /* Change to the program's directory */
+    old_dir = CurrentDir(wb_startup->sm_ArgList[0].wa_Lock);
+
+    /* Get the program's icon */
+    dobj = GetDiskObject(wb_startup->sm_ArgList[0].wa_Name);
+    if (dobj) {
+        tooltypes = (char **)dobj->do_ToolTypes;
+
+        /* Check for DISPLAY tooltype */
+        value = (char *)FindToolType((CONST_STRPTR *)tooltypes, (CONST_STRPTR)"DISPLAY");
+        if (value) {
+            if (MatchToolValue((CONST_STRPTR)value, (CONST_STRPTR)"WINDOW")) {
+                app->display_mode = DISPLAY_WINDOW;
+            } else if (MatchToolValue((CONST_STRPTR)value, (CONST_STRPTR)"SCREEN")) {
+                app->display_mode = DISPLAY_SCREEN;
+            } else if (MatchToolValue((CONST_STRPTR)value, (CONST_STRPTR)"AUTO")) {
+                app->display_mode = DISPLAY_AUTO;
+            }
+        }
+
+        /* Check for DEBUG tooltype */
+        if (FindToolType((CONST_STRPTR *)tooltypes, (CONST_STRPTR)"DEBUG")) {
+            g_debug_enabled = TRUE;
+        }
+
+        FreeDiskObject(dobj);
+    }
+
+    CurrentDir(old_dir);
+}
+
+/*
  * Main entry point
  */
 int main(int argc, char **argv)
 {
     int ret = RETURN_OK;
 
-    (void)argc;
-    (void)argv;
-
-    /* Parse command line arguments first */
-    parse_args();
+    /* Check if started from Workbench */
+    if (argc == 0) {
+        /* Started from Workbench - argv is actually a WBStartup pointer */
+        wb_startup = (struct WBStartup *)argv;
+    } else {
+        /* Started from CLI - parse command line arguments */
+        parse_args();
+    }
 
     debug("xSysInfo: Starting...\n");
 
@@ -137,6 +193,11 @@ int main(int argc, char **argv)
     if (!open_libraries()) {
         ret = RETURN_FAIL;
         goto cleanup;
+    }
+
+    /* Parse tooltypes if started from Workbench */
+    if (wb_startup) {
+        parse_tooltypes();
     }
 
     debug("xSysInfo: Detecting hardware...\n");
@@ -231,6 +292,10 @@ static BOOL open_libraries(void)
 
     app->IdentifyBase = IdentifyBase;
 
+    /* Open icon.library - optional, for reading tooltypes */
+    IconBase = OpenLibrary((CONST_STRPTR)"icon.library", 37);
+    /* Not a failure if icon.library can't be opened */
+
     return TRUE;
 }
 
@@ -239,6 +304,11 @@ static BOOL open_libraries(void)
  */
 static void close_libraries(void)
 {
+    if (IconBase) {
+        CloseLibrary(IconBase);
+        IconBase = NULL;
+    }
+
     if (IdentifyBase) {
         CloseLibrary(IdentifyBase);
         IdentifyBase = NULL;
@@ -282,16 +352,24 @@ static BOOL open_display(void)
     struct Screen *wb_screen;
     BOOL use_window = FALSE;
 
-    /* Lock Workbench screen to check its mode */
-    wb_screen = LockPubScreen((CONST_STRPTR)"Workbench");
-    if (!wb_screen) {
-        wb_screen = LockPubScreen(NULL);  /* Default public screen */
-    }
+    /* Check display mode setting from tooltypes */
+    if (app->display_mode == DISPLAY_WINDOW) {
+        use_window = TRUE;
+    } else if (app->display_mode == DISPLAY_SCREEN) {
+        use_window = FALSE;
+    } else {
+        /* AUTO mode - detect based on RTG */
+        /* Lock Workbench screen to check its mode */
+        wb_screen = LockPubScreen((CONST_STRPTR)"Workbench");
+        if (!wb_screen) {
+            wb_screen = LockPubScreen(NULL);  /* Default public screen */
+        }
 
-    if (wb_screen) {
-        /* Check if Workbench is in RTG mode */
-        use_window = is_rtg_mode(wb_screen);
-        UnlockPubScreen(NULL, wb_screen);
+        if (wb_screen) {
+            /* Check if Workbench is in RTG mode */
+            use_window = is_rtg_mode(wb_screen);
+            UnlockPubScreen(NULL, wb_screen);
+        }
     }
 
     /* Determine if system is PAL or NTSC */
@@ -435,6 +513,12 @@ static void main_loop(void)
             UWORD code = msg->Code;
             WORD mx = msg->MouseX;
             WORD my = msg->MouseY;
+
+            /* In windowed mode, adjust for window decorations */
+            if (!app->use_custom_screen) {
+                mx -= app->window->BorderLeft;
+                my -= app->window->BorderTop;
+            }
 
             ReplyMsg((struct Message *)msg);
 

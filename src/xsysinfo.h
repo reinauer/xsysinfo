@@ -92,6 +92,13 @@ typedef enum {
     SCALE_EXPAND        /* Linear scale to fit all */
 } BarScale;
 
+/* Display mode (from tooltype or command line) */
+typedef enum {
+    DISPLAY_AUTO,       /* Auto-detect based on screen resolution */
+    DISPLAY_WINDOW,     /* Force window on Workbench */
+    DISPLAY_SCREEN      /* Force custom screen */
+} DisplayMode;
+
 /* Global application context */
 typedef struct {
     /* Display */
@@ -101,6 +108,7 @@ typedef struct {
     BOOL use_custom_screen;         /* TRUE if we opened our own screen */
     BOOL is_pal;                    /* TRUE if PAL system */
     UWORD screen_height;            /* Actual screen height (200 or 256) */
+    DisplayMode display_mode;       /* Requested display mode */
 
     /* Libraries */
     struct Library *IdentifyBase;

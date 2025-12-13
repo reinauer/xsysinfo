@@ -1,0 +1,63 @@
+name: A4091 Draft Release
+
+on:
+  push:
+    tags:
+      - "release_*"
+  workflow_dispatch:
+
+permissions:
+  contents: write  # needed for creating GitHub releases
+
+jobs:
+  build:
+    name: Build release artifacts
+    runs-on: ubuntu-latest
+    container: stefanreinauer/amiga-gcc
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Mark git directory as safe
+        run: git config --global --add safe.directory '*'
+
+      - name: Build all artifacts
+        run: make all disk
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts
+          path: |
+            xsysinfo
+            xsysinfo-*.adf
+          if-no-files-found: error
+
+  release:
+    name: Create GitHub Draft Release
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout (required by gh-release)
+        uses: actions/checkout@v4
+
+      - name: Mark git directory as safe
+        run: git config --global --add safe.directory '*'
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts
+          path: artifacts
+
+      - name: Create draft release
+        uses: softprops/action-gh-release@v1
+        with:
+          draft: true
+          files: |
+            artifacts/xsysinfo
+            artifacts/xsysinfo-*.adf

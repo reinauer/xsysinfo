@@ -62,7 +62,12 @@ $(FLEXCAT_BIN):
 
 # Identify library build (requires FlexCat)
 identify: $(FLEXCAT_BIN)
-	@export PATH="$(CURDIR)/3rdparty/flexcat/src/bin_unix:$(CURDIR)/3rdparty/flexcat/src/bin_darwin:$(PATH)" && \
+	@{ if [ ! -f $(HOME)/.fd2pragma.types ]; then \
+	     echo '$$(HOME)/.fd2pragma.types not found. Downloading.'; \
+	     curl -sL 'https://github.com/adtools/fd2pragma/raw/refs/heads/master/fd2pragma.types' \
+		  -o $(HOME)/.fd2pragma.types; \
+	   fi } && \
+	export PATH="$(CURDIR)/3rdparty/flexcat/src/bin_unix:$(CURDIR)/3rdparty/flexcat/src/bin_darwin:$(PATH)" && \
 	$(MAKE) -s -C 3rdparty/identify reference/proto/identify.h reference/inline/identify.h
 
 $(TARGET): $(OBJS)
@@ -70,6 +75,7 @@ $(TARGET): $(OBJS)
 	@$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
 	@echo "  STRIP $@"
 	@$(STRIP) $@
+	@wc -c < "$@" | awk '{printf "$@ successfully compiled (%s bytes)\n", $$1}'
 
 src/%.o: src/%.c src/xsysinfo.h
 	@echo "  CC    $@"
@@ -199,4 +205,5 @@ disk: $(TARGET) download-libs
 	@xdftool $(DISK) write Startup-Sequence S/Startup-Sequence
 	@xdftool $(DISK) write 3rdparty/identify/build/pci.db S/pci.db
 	@xdftool $(DISK) boot install
-	@xdftool $(DISK) list
+	@xdftool $(DISK) info
+	@ln -sf $(DISK) xsysinfo.adf

@@ -51,15 +51,21 @@ extern struct TextAttr Topaz8Font;
 #define RTG_WIDTH_THRESHOLD     640
 #define RTG_HEIGHT_THRESHOLD    512
 
-/* Color indices for our palette */
-#define COLOR_BACKGROUND    0
-#define COLOR_PANEL_BG      1
-#define COLOR_TEXT          2
-#define COLOR_HIGHLIGHT     3
-#define COLOR_BAR_FILL      4
-#define COLOR_BAR_YOU       5
-#define COLOR_BUTTON_LIGHT  6
-#define COLOR_BUTTON_DARK   7
+/* Number of colors in our palette */
+#define NUM_COLORS          8
+
+/* Pen lookup macro - maps logical color index to actual pen */
+#define PEN(c) (app->pens[c])
+
+/* Color definitions - use PEN() to map through allocated pens */
+#define COLOR_BACKGROUND    PEN(0)
+#define COLOR_PANEL_BG      PEN(1)
+#define COLOR_TEXT          PEN(2)
+#define COLOR_HIGHLIGHT     PEN(3)
+#define COLOR_BAR_FILL      PEN(4)
+#define COLOR_BAR_YOU       PEN(5)
+#define COLOR_BUTTON_LIGHT  PEN(6)
+#define COLOR_BUTTON_DARK   PEN(7)
 
 /* Application state / view modes */
 typedef enum {
@@ -109,6 +115,10 @@ typedef struct {
     BOOL is_pal;                    /* TRUE if PAL system */
     UWORD screen_height;            /* Actual screen height (200 or 256) */
     DisplayMode display_mode;       /* Requested display mode */
+
+    /* Pen allocation for Workbench window mode */
+    WORD pens[NUM_COLORS];          /* Mapped pen numbers for each color */
+    BOOL pens_allocated;            /* TRUE if pens need ReleasePen() */
 
     /* Libraries */
     struct Library *IdentifyBase;

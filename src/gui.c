@@ -405,8 +405,8 @@ void draw_panel(WORD x, WORD y, WORD w, WORD h, const char *title)
 void draw_3d_box(WORD x, WORD y, WORD w, WORD h, BOOL recessed)
 {
     struct RastPort *rp = app->rp;
-    UBYTE top_color = recessed ? COLOR_BUTTON_DARK : COLOR_BUTTON_LIGHT;
-    UBYTE bot_color = recessed ? COLOR_BUTTON_LIGHT : COLOR_BUTTON_DARK;
+    WORD top_color = recessed ? COLOR_BUTTON_DARK : COLOR_BUTTON_LIGHT;
+    WORD bot_color = recessed ? COLOR_BUTTON_LIGHT : COLOR_BUTTON_DARK;
 
     SetAPen(rp, top_color);
     Move(rp, x, y + h - 1);
@@ -711,7 +711,7 @@ static void update_software_list(void)
 /*
  * Draw single speed bar
  */
-void draw_single_bar(WORD x, WORD y, ULONG value, ULONG max_value, UBYTE color)
+void draw_single_bar(WORD x, WORD y, ULONG value, ULONG max_value, WORD color)
 {
     struct RastPort *rp = app->rp;
     WORD bar_width;

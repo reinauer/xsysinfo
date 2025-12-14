@@ -90,6 +90,8 @@ static BOOL open_display(void);
 static void close_display(void);
 static void main_loop(void);
 static void set_palette(void);
+static void allocate_pens(void);
+static void release_pens(void);
 static BOOL is_rtg_mode(struct Screen *screen);
 static void parse_tooltypes(void);
 
@@ -450,6 +452,9 @@ static BOOL open_display(void)
         app->rp = app->window->RPort;
     }
 
+    /* Allocate/map pens for drawing */
+    allocate_pens();
+
     return TRUE;
 }
 
@@ -458,6 +463,9 @@ static BOOL open_display(void)
  */
 static void close_display(void)
 {
+    /* Release any allocated pens before closing */
+    release_pens();
+
     if (app->window) {
         CloseWindow(app->window);
         app->window = NULL;
@@ -487,6 +495,83 @@ static void set_palette(void)
                 (palette[i] >> 4) & 0xF,
                 palette[i] & 0xF);
     }
+}
+
+/*
+ * Allocate pens for drawing
+ * On custom screen: use direct pen indices 0-7
+ * On Workbench: obtain best matching pens from screen's colormap
+ */
+static void allocate_pens(void)
+{
+    UWORD i;
+    struct ColorMap *cm;
+
+    app->pens_allocated = FALSE;
+
+    if (app->use_custom_screen) {
+        /* Custom screen: we control the palette, use direct indices */
+        for (i = 0; i < NUM_COLORS; i++) {
+            app->pens[i] = i;
+        }
+        return;
+    }
+
+    /* Workbench window mode: need to obtain matching pens */
+    cm = app->screen->ViewPort.ColorMap;
+
+    if (GfxBase->LibNode.lib_Version >= 39) {
+        /* OS 3.0+: Use ObtainBestPenA for best color match with allocation */
+        for (i = 0; i < NUM_COLORS; i++) {
+            /* Convert 4-bit RGB to 32-bit RGB for ObtainBestPen */
+            ULONG r = ((palette[i] >> 8) & 0xF) * 0x11111111;
+            ULONG g = ((palette[i] >> 4) & 0xF) * 0x11111111;
+            ULONG b = (palette[i] & 0xF) * 0x11111111;
+
+            app->pens[i] = ObtainBestPenA(cm, r, g, b, NULL);
+            if (app->pens[i] == -1) {
+                /* Fallback to pen 1 if allocation fails */
+                app->pens[i] = 1;
+            }
+        }
+        app->pens_allocated = TRUE;
+    } else {
+        /* OS 2.0 (v37-v38): Use FindColor for best match without allocation */
+        for (i = 0; i < NUM_COLORS; i++) {
+            /* Convert 4-bit RGB to 32-bit RGB for FindColor */
+            ULONG r = ((palette[i] >> 8) & 0xF) * 0x11111111;
+            ULONG g = ((palette[i] >> 4) & 0xF) * 0x11111111;
+            ULONG b = (palette[i] & 0xF) * 0x11111111;
+
+            app->pens[i] = FindColor(cm, r, g, b, -1);
+        }
+    }
+}
+
+/*
+ * Release allocated pens
+ */
+static void release_pens(void)
+{
+    UWORD i;
+    struct ColorMap *cm;
+
+    if (!app->pens_allocated || !app->screen) {
+        return;
+    }
+
+    cm = app->screen->ViewPort.ColorMap;
+
+    /* Only release if we used ObtainBestPenA (OS 3.0+) */
+    if (GfxBase->LibNode.lib_Version >= 39) {
+        for (i = 0; i < NUM_COLORS; i++) {
+            if (app->pens[i] != -1) {
+                ReleasePen(cm, app->pens[i]);
+            }
+        }
+    }
+
+    app->pens_allocated = FALSE;
 }
 
 /*

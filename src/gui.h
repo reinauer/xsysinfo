@@ -132,7 +132,7 @@ void draw_label_value(WORD x, WORD y, const char *label, const char *value, WORD
 
 /* Bar graph drawing */
 void draw_speed_bars(void);
-void draw_single_bar(WORD x, WORD y, ULONG value, ULONG max_value, UBYTE color);
+void draw_single_bar(WORD x, WORD y, ULONG value, ULONG max_value, WORD color);
 
 /* Scroll bar drawing */
 void draw_scroll_arrow(WORD x, WORD y, WORD w, WORD h, BOOL up, BOOL pressed);

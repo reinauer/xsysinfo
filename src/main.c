@@ -389,7 +389,7 @@ static BOOL open_display(void)
         app->window = OpenWindowTags(NULL,
             WA_Title, (ULONG)XSYSINFO_NAME " " XSYSINFO_VERSION,
             WA_InnerWidth, SCREEN_WIDTH,
-            WA_InnerHeight, app->screen_height,
+            WA_InnerHeight, SCREEN_HEIGHT_NTSC + 10,
             WA_IDCMP, IDCMP_CLOSEWINDOW | IDCMP_MOUSEBUTTONS |
                       IDCMP_REFRESHWINDOW | IDCMP_VANILLAKEY |
                       IDCMP_MOUSEMOVE | IDCMP_RAWKEY,

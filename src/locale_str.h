@@ -83,6 +83,7 @@ typedef enum {
     MSG_LARGEST_BLOCK,
     MSG_NUM_CHUNKS,
     MSG_NODE_NAME,
+    MSG_MEMORY_SPEED,
 
     /* Drives view labels */
     MSG_DISK_ERRORS,

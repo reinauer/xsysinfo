@@ -4,6 +4,7 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <inttypes.h>
 
 #include <graphics/rastport.h>
 #include <graphics/text.h>
@@ -231,14 +232,23 @@ void update_button_states(void)
             break;
 
         case VIEW_MEMORY:
-            add_button(100, 188, 60, 12,
-                       get_string(MSG_BTN_PREV), BTN_MEM_PREV,
-                       app->memory_region_index > 0);
-            add_button(160, 188, 60, 12,
-                       get_string(MSG_BTN_NEXT), BTN_MEM_NEXT,
-                       app->memory_region_index < (LONG)memory_regions.count - 1);
-            add_button(220, 188, 60, 12,
-                       get_string(MSG_BTN_EXIT), BTN_MEM_EXIT, TRUE);
+            {
+                static char counter_str[16];
+                snprintf(counter_str, sizeof(counter_str), "%" PRId32 " / %lu",
+                         app->memory_region_index + 1, (unsigned long)memory_regions.count);
+                add_button(100, 188, 52, 12,
+                           get_string(MSG_BTN_PREV), BTN_MEM_PREV,
+                           app->memory_region_index > 0);
+                add_button(160, 188, 52, 12,
+                           counter_str, BTN_MEM_COUNTER, FALSE);
+                add_button(220, 188, 52, 12,
+                           get_string(MSG_BTN_NEXT), BTN_MEM_NEXT,
+                           app->memory_region_index < (LONG)memory_regions.count - 1);
+                add_button(280, 188, 52, 12,
+                           get_string(MSG_BTN_SPEED), BTN_MEM_SPEED, TRUE);
+                add_button(340, 188, 52, 12,
+                           get_string(MSG_BTN_EXIT), BTN_MEM_EXIT, TRUE);
+            }
             break;
 
         case VIEW_DRIVES:
@@ -259,12 +269,12 @@ void update_button_states(void)
                     scsi_enabled = drive_list.drives[app->selected_drive].scsi_supported;
                 }
                 add_button(100, 188, 52, 12,
-                           get_string(MSG_BTN_EXIT), BTN_DRV_EXIT, TRUE);
-                add_button(160, 188, 52, 12,
                            get_string(MSG_BTN_SCSI), BTN_DRV_SCSI, scsi_enabled);
-                add_button(220, 188, 52, 12,
+                add_button(160, 188, 52, 12,
                            get_string(MSG_BTN_SPEED), BTN_DRV_SPEED,
                            app->selected_drive >= 0);
+                add_button(220, 188, 52, 12,
+                           get_string(MSG_BTN_EXIT), BTN_DRV_EXIT, TRUE);
             }
             break;
 
@@ -1240,6 +1250,14 @@ void handle_button_press(ButtonID btn_id)
         case BTN_MEM_NEXT:
             if (app->memory_region_index < (LONG)memory_regions.count - 1) {
                 app->memory_region_index++;
+                redraw_current_view();
+            }
+            break;
+
+        case BTN_MEM_SPEED:
+            if (app->memory_region_index >= 0 &&
+                app->memory_region_index < (LONG)memory_regions.count) {
+                measure_memory_speed(app->memory_region_index);
                 redraw_current_view();
             }
             break;

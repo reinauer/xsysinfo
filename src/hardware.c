@@ -71,9 +71,42 @@ BOOL detect_hardware(void)
     debug("  hw: Generating comment...\n");
     generate_comment();
 
-    /* Get Kickstart info */
-    hw_info.kickstart_version = SysBase->LibNode.lib_Version;
-    hw_info.kickstart_revision = SysBase->LibNode.lib_Revision;
+    /* Get Kickstart info from identify.library */
+    /* Get ROM version string and parse it (format: "Vxx.yy" or "xx.yy") */
+    {
+        STRPTR rom_ver = IdHardware(IDHW_ROMVER, NULL);
+        if (rom_ver) {
+            const char *p = (const char *)rom_ver;
+            /* Skip 'V' prefix if present */
+            if (*p == 'V' || *p == 'v') p++;
+            /* Parse version.revision */
+            hw_info.kickstart_version = 0;
+            hw_info.kickstart_revision = 0;
+            while (*p >= '0' && *p <= '9') {
+                hw_info.kickstart_version = hw_info.kickstart_version * 10 + (*p - '0');
+                p++;
+            }
+            if (*p == '.') {
+                p++;
+                while (*p >= '0' && *p <= '9') {
+                    hw_info.kickstart_revision = hw_info.kickstart_revision * 10 + (*p - '0');
+                    p++;
+                }
+            }
+        }
+        /* Fallback to exec version if identify didn't provide ROM version */
+        if (hw_info.kickstart_version == 0) {
+            hw_info.kickstart_version = SysBase->LibNode.lib_Version;
+            hw_info.kickstart_revision = SysBase->LibNode.lib_Revision;
+        }
+    }
+
+    /* Get ROM size from identify.library */
+    hw_info.kickstart_size = IdHardwareNum(IDHW_ROMSIZE, NULL);
+    if (hw_info.kickstart_size == 0) {
+        /* Fallback: default to 512K */
+        hw_info.kickstart_size = 512;
+    }
 
     debug("  hw: Hardware detection complete.\n");
     return TRUE;

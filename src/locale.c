@@ -82,6 +82,7 @@ static const char *default_strings[MSG_COUNT] = {
     /* MSG_LARGEST_BLOCK */     "LARGEST BLOCK",
     /* MSG_NUM_CHUNKS */        "NUMBER OF CHUNKS",
     /* MSG_NODE_NAME */         "NODE NAME",
+    /* MSG_MEMORY_SPEED */      "MEMORY SPEED",
 
     /* Drives view labels */
     /* MSG_DISK_ERRORS */       "NUMBER OF DISK ERRORS",

@@ -655,11 +655,26 @@ MemoryLocation determine_mem_location(APTR addr)
  */
 const char *get_location_string(MemoryLocation loc)
 {
+    static char kickstart_size_str[16];
+
     switch (loc) {
         case LOC_ROM:       return "ROM";
         case LOC_CHIP_RAM:  return "CHIP RAM";
         case LOC_24BIT_RAM: return "24BitRAM";
         case LOC_32BIT_RAM: return "32BitRAM";
+        case LOC_KICKSTART:
+            /* Return ROM size string (e.g., "256K" or "512K") */
+            /* kickstart_size is in KB from identify.library */
+            if (hw_info.kickstart_size >= 1024) {
+                /* Size is in bytes, convert to KB */
+                snprintf(kickstart_size_str, sizeof(kickstart_size_str),
+                         "%luK", (unsigned long)(hw_info.kickstart_size / 1024));
+            } else {
+                /* Size is already in KB */
+                snprintf(kickstart_size_str, sizeof(kickstart_size_str),
+                         "%luK", (unsigned long)hw_info.kickstart_size);
+            }
+            return kickstart_size_str;
         default:            return "???";
     }
 }

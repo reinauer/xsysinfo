@@ -16,6 +16,7 @@
 #include "memory.h"
 #include "gui.h"
 #include "locale_str.h"
+#include "benchmark.h"
 
 /* Global memory region list */
 MemoryRegionList memory_regions;
@@ -172,6 +173,83 @@ void refresh_memory_region(ULONG index)
 }
 
 /*
+ * Measure memory read speed for a region
+ * Returns bytes per second
+ */
+ULONG measure_memory_speed(ULONG index)
+{
+    MemoryRegion *region;
+    ULONG buffer_size;
+    ULONG num_reads;
+    ULONG total_read = 0;
+    uint64_t start_time, end_time, elapsed;
+    ULONG bytes_per_sec = 0;
+    volatile ULONG *src;
+    volatile ULONG dummy;
+    ULONG i, j;
+    ULONG longs_per_read;
+
+    if (index >= memory_regions.count) return 0;
+
+    region = &memory_regions.regions[index];
+
+    /* Use a reasonable buffer size - 64K for test reads */
+    buffer_size = 64 * 1024;
+
+    /* Limit to available region size */
+    if (buffer_size > region->total_size) {
+        buffer_size = region->total_size;
+    }
+
+    /* Ensure we're reading aligned longwords */
+    buffer_size &= ~3;
+    if (buffer_size < 256) {
+        /* Region too small for meaningful test */
+        region->speed_measured = TRUE;
+        region->speed_bytes_sec = 0;
+        return 0;
+    }
+
+    /* Number of read passes to get a meaningful measurement */
+    num_reads = 16;
+
+    /* Calculate longs per read pass */
+    longs_per_read = buffer_size / sizeof(ULONG);
+
+    /* Get start time */
+    start_time = get_timer_ticks();
+
+    /* Perform read test directly on the memory region */
+    src = (volatile ULONG *)region->start_address;
+
+    for (i = 0; i < num_reads; i++) {
+        /* Read through the buffer */
+        for (j = 0; j < longs_per_read; j++) {
+            dummy = src[j];
+        }
+        total_read += buffer_size;
+    }
+
+    /* Suppress unused variable warning */
+    (void)dummy;
+
+    /* Get end time */
+    end_time = get_timer_ticks();
+
+    /* Calculate speed */
+    elapsed = end_time - start_time;
+    if (elapsed > 0 && total_read > 0) {
+        /* Timer ticks are in microseconds */
+        bytes_per_sec = (ULONG)(((uint64_t)total_read * 1000000ULL) / elapsed);
+    }
+
+    region->speed_bytes_sec = bytes_per_sec;
+    region->speed_measured = TRUE;
+
+    return bytes_per_sec;
+}
+
+/*
  * Draw memory view
  */
 void draw_memory_view(void)
@@ -196,7 +274,7 @@ void draw_memory_view(void)
     }
 
     /* Draw memory info panel */
-    draw_panel(100, 28, 520, 140, NULL);
+    draw_panel(100, 28, 520, 150, NULL);
 
     /* Refresh current region data */
     refresh_memory_region(app->memory_region_index);
@@ -261,20 +339,42 @@ void draw_memory_view(void)
 
     /* Node name */
     draw_label_value(128, y, get_string(MSG_NODE_NAME), region->node_name, 168);
+    y += 10;
+
+    /* Memory speed - display in appropriate units */
+    if (region->speed_measured) {
+        ULONG speed = region->speed_bytes_sec;
+        if (speed >= 1000000) {
+            /* MB/s for fast memory */
+            snprintf(buffer, sizeof(buffer), "%lu.%lu MB/s",
+                     (unsigned long)(speed / 1000000),
+                     (unsigned long)((speed % 1000000) / 100000));
+        } else if (speed >= 10000) {
+            /* KB/s */
+            snprintf(buffer, sizeof(buffer), "%lu.%lu KB/s",
+                     (unsigned long)(speed / 1000),
+                     (unsigned long)((speed % 1000) / 100));
+        } else if (speed > 0) {
+            /* Bytes/s for very slow memory */
+            snprintf(buffer, sizeof(buffer), "%lu B/s", (unsigned long)speed);
+        } else {
+            strncpy(buffer, "---", sizeof(buffer));
+        }
+    } else {
+        strncpy(buffer, "---", sizeof(buffer));
+    }
+    draw_label_value(128, y, get_string(MSG_MEMORY_SPEED), buffer, 168);
 
     /* Draw navigation buttons */
     Button *btn;
     btn = find_button(BTN_MEM_PREV);
     if (btn) draw_button(btn);
+    btn = find_button(BTN_MEM_COUNTER);
+    if (btn) draw_button(btn);
     btn = find_button(BTN_MEM_NEXT);
+    if (btn) draw_button(btn);
+    btn = find_button(BTN_MEM_SPEED);
     if (btn) draw_button(btn);
     btn = find_button(BTN_MEM_EXIT);
     if (btn) draw_button(btn);
-
-    /* Show region counter */
-    snprintf(buffer, sizeof(buffer), "%" PRId32 " / %lu",
-             app->memory_region_index + 1, (unsigned long)memory_regions.count);
-    SetAPen(rp, COLOR_TEXT);
-    Move(rp, 340, 180);
-    Text(rp, (CONST_STRPTR)buffer, strlen(buffer));
 }

@@ -35,7 +35,9 @@ typedef enum {
 
     /* Memory view buttons */
     BTN_MEM_PREV,
+    BTN_MEM_COUNTER,    /* Display-only counter between prev/next */
     BTN_MEM_NEXT,
+    BTN_MEM_SPEED,
     BTN_MEM_EXIT,
 
     /* Drives view buttons */

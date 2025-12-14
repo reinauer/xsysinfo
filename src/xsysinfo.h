@@ -82,7 +82,8 @@ typedef enum {
     LOC_ROM,
     LOC_32BIT_RAM,
     LOC_24BIT_RAM,
-    LOC_CHIP_RAM
+    LOC_CHIP_RAM,
+    LOC_KICKSTART       /* Special: shows ROM size (256K/512K) */
 } MemoryLocation;
 
 /* Bar graph scale modes */

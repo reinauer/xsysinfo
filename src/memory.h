@@ -25,6 +25,8 @@ typedef struct {
     ULONG num_chunks;
     char node_name[64];
     char type_string[64];   /* Human-readable type */
+    ULONG speed_bytes_sec;  /* Read speed in bytes/second */
+    BOOL speed_measured;    /* TRUE if speed test has been run */
 } MemoryRegion;
 
 /* Memory region list */
@@ -45,5 +47,11 @@ const char *get_memory_type_string(UWORD attrs, APTR addr);
 
 /* Count free chunks and find largest block in a memory region */
 void analyze_memory_region(struct MemHeader *mh, ULONG *chunks, ULONG *largest);
+
+/* Measure memory read speed for a region (returns bytes/second) */
+ULONG measure_memory_speed(ULONG index);
+
+/* Draw memory view */
+void draw_memory_view(void);
 
 #endif /* MEMORY_H */

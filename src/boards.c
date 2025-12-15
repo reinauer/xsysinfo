@@ -126,6 +126,15 @@ void enumerate_boards(void)
 }
 
 /*
+ * Draw text field at position
+ */
+static void draw_board_field(struct RastPort *rp, WORD x, WORD y, const char *text)
+{
+    Move(rp, x, y);
+    Text(rp, (CONST_STRPTR)text, strlen(text));
+}
+
+/*
  * Draw boards view
  */
 void draw_boards_view(void)
@@ -172,32 +181,25 @@ void draw_boards_view(void)
 
         /* Address */
         snprintf(buffer, sizeof(buffer), "$%08lX", (unsigned long)board->board_address);
-        Move(rp, 25, y);
-        Text(rp, (CONST_STRPTR)buffer, strlen(buffer));
+        draw_board_field(rp, 25, y, buffer);
 
         /* Size */
-        Move(rp, 136, y);
-        Text(rp, (CONST_STRPTR)board->size_string, strlen(board->size_string));
+        draw_board_field(rp, 136, y, board->size_string);
 
         /* Type */
-        Move(rp, 214, y);
-        Text(rp, (CONST_STRPTR)get_board_type_string(board->board_type),
-             strlen(get_board_type_string(board->board_type)));
+        draw_board_field(rp, 214, y, get_board_type_string(board->board_type));
 
         /* Product */
         snprintf(buffer, sizeof(buffer), "%.16s", board->product_name);
-        Move(rp, 296, y);
-        Text(rp, (CONST_STRPTR)buffer, strlen(buffer));
+        draw_board_field(rp, 296, y, buffer);
 
         /* Manufacturer */
         snprintf(buffer, sizeof(buffer), "%.14s", board->manufacturer_name);
-        Move(rp, 420, y);
-        Text(rp, (CONST_STRPTR)buffer, strlen(buffer));
+        draw_board_field(rp, 420, y, buffer);
 
         /* Serial */
         snprintf(buffer, sizeof(buffer), "%ld", (long)board->serial_number);
-        Move(rp, 550, y);
-        Text(rp, (CONST_STRPTR)buffer, strlen(buffer));
+        draw_board_field(rp, 550, y, buffer);
 
         y += 10;
     }

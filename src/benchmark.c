@@ -385,6 +385,23 @@ ULONG measure_mem_read_speed(volatile ULONG *src, ULONG buffer_size, ULONG itera
 }
 
 /*
+ * Helper to test RAM speed by allocating a buffer
+ */
+static ULONG test_ram_speed(ULONG mem_flags, ULONG buffer_size, ULONG iterations)
+{
+    APTR buffer;
+    ULONG speed = 0;
+
+    buffer = AllocMem(buffer_size, mem_flags | MEMF_CLEAR);
+    if (buffer) {
+        speed = measure_mem_read_speed(
+            (volatile ULONG *)buffer, buffer_size, iterations);
+        FreeMem(buffer, buffer_size);
+    }
+    return speed;
+}
+
+/*
  * Run memory speed tests for CHIP, FAST, and ROM
  * Results stored in bench_results
  */
@@ -392,28 +409,12 @@ void run_memory_speed_tests(void)
 {
     ULONG buffer_size = 65536;
     ULONG iterations = 16;
-    APTR chip_buffer;
-    APTR fast_buffer;
 
     /* Test CHIP RAM speed */
-    chip_buffer = AllocMem(buffer_size, MEMF_CHIP | MEMF_CLEAR);
-    if (chip_buffer) {
-        bench_results.chip_speed = measure_mem_read_speed(
-            (volatile ULONG *)chip_buffer, buffer_size, iterations);
-        FreeMem(chip_buffer, buffer_size);
-    } else {
-        bench_results.chip_speed = 0;
-    }
+    bench_results.chip_speed = test_ram_speed(MEMF_CHIP, buffer_size, iterations);
 
     /* Test FAST RAM speed (if available) */
-    fast_buffer = AllocMem(buffer_size, MEMF_FAST | MEMF_CLEAR);
-    if (fast_buffer) {
-        bench_results.fast_speed = measure_mem_read_speed(
-            (volatile ULONG *)fast_buffer, buffer_size, iterations);
-        FreeMem(fast_buffer, buffer_size);
-    } else {
-        bench_results.fast_speed = 0;
-    }
+    bench_results.fast_speed = test_ram_speed(MEMF_FAST, buffer_size, iterations);
 
     /* Test ROM read speed (Kickstart ROM at $F80000) */
     bench_results.rom_speed = measure_mem_read_speed(

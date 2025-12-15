@@ -715,6 +715,8 @@ void draw_single_bar(WORD x, WORD y, ULONG value, ULONG max_value, WORD color)
 {
     struct RastPort *rp = app->rp;
     WORD bar_width;
+    BOOL overflow = FALSE;
+    ULONG calculated_width = 0;
 
     /* Draw border */
     draw_3d_box(x - 1, y - 1, SPEED_BAR_MAX_WIDTH + 2, SPEED_BAR_HEIGHT + 2, TRUE);
@@ -723,28 +725,51 @@ void draw_single_bar(WORD x, WORD y, ULONG value, ULONG max_value, WORD color)
 
     if (app->bar_scale == SCALE_EXPAND) {
         /* Linear scale */
-        bar_width = (value * SPEED_BAR_MAX_WIDTH) / max_value;
+        calculated_width = (ULONG)(((unsigned long long)value * SPEED_BAR_MAX_WIDTH) / max_value);
     } else {
         /* Shrink mode: A4000 at 50% */
         ULONG a4000_value = reference_systems[REF_A4000].dhrystones;
+        ULONG half_width = SPEED_BAR_MAX_WIDTH / 2;
         if (value <= a4000_value) {
-            bar_width = (value * (SPEED_BAR_MAX_WIDTH / 2)) / a4000_value;
+            calculated_width = (ULONG)(((unsigned long long)value * half_width) / a4000_value);
         } else {
-            bar_width = (SPEED_BAR_MAX_WIDTH / 2) +
-                        ((value - a4000_value) * (SPEED_BAR_MAX_WIDTH / 2)) /
-                        (max_value - a4000_value);
+            calculated_width = half_width +
+                (ULONG)(((unsigned long long)(value - a4000_value) * half_width) /
+                (max_value - a4000_value));
         }
     }
 
-    /* Clamp to max width */
-    if (bar_width > SPEED_BAR_MAX_WIDTH) {
+    /* Clamp to max width and flag values beyond the current scale */
+    if (calculated_width > SPEED_BAR_MAX_WIDTH) {
+        overflow = TRUE;
         bar_width = SPEED_BAR_MAX_WIDTH;
+    } else {
+        bar_width = calculated_width;
+        if (value > max_value) {
+            overflow = TRUE;
+        }
     }
 
     /* Draw bar */
     if (bar_width > 0) {
         SetAPen(rp, color);
         RectFill(rp, x, y, x + bar_width - 1, y + SPEED_BAR_HEIGHT - 1);
+    }
+
+    /* Indicate values that exceed the current scale */
+    if (overflow) {
+        WORD plus_center_x = x + SPEED_BAR_MAX_WIDTH - 7;
+        WORD plus_center_y = y + (SPEED_BAR_HEIGHT / 2) - 1;
+
+        SetAPen(rp, COLOR_HIGHLIGHT);
+	// -
+        Move(rp, plus_center_x - 5, plus_center_y);
+        Draw(rp, plus_center_x + 4, plus_center_y);
+        // | needs a double line
+        Move(rp, plus_center_x, plus_center_y - 2);
+        Draw(rp, plus_center_x, plus_center_y + 2);
+        Move(rp, plus_center_x - 1, plus_center_y - 2);
+        Draw(rp, plus_center_x - 1, plus_center_y + 2);
     }
 }
 
@@ -769,8 +794,12 @@ static void draw_speed_panel(void)
     Button *scale_btn = find_button(BTN_SCALE_TOGGLE);
     if (scale_btn) draw_button(scale_btn);
 
-    /* Calculate max value for scaling */
-    max_value = get_max_dhrystones();
+    if (app->bar_scale == SCALE_EXPAND) {
+        max_value = get_max_dhrystones();  /* Scale to fastest known system */
+    } else {
+        ULONG a4000_value = reference_systems[REF_A4000].dhrystones;
+        max_value = a4000_value ? a4000_value * 2 : 1; /* A4000 at 50%, cap at ~2x */
+    }
 
     /* Draw "You" entry first */
     y = SPEED_PANEL_Y + 22;

@@ -1,6 +1,6 @@
 # xSysInfo
 
-![XSysInfo](docs/xsysinfo.png)
+![XSysInfo](docs/xsysinfo-v0.2a.png)
 
 `xSysInfo` is a comprehensive system information utility designed for AmigaOS. It provides detailed insights into your Amiga system's hardware and software configuration, along with benchmarking capabilities.
 
@@ -44,6 +44,17 @@ The primary way to run `xSysInfo` on a real Amiga is via a GOTEK drive using the
 You can also run the ADF on an Amiga emulator (like WinUAE or FS-UAE).
 
 Additionally, the `xsysinfo` binary itself can be executed directly from the shell on a real Amiga or emulator.
+
+## Configuration
+
+You can select whether xSysInfo is started in a window or on its own screen
+by specifying a DISPLAY ToolType. DISPLAY=auto is the default and will select
+window when your screen resolution is larger than 640x512, as xSysInfo is
+assuming RTG mode. For lower resolutions it will start on a PAL or NTSC screen.
+You can force either behavior with DISPLAY=window or DISPLAY=screen.
+
+![XSysInfo in windowed mode](docs/xsysinfo-windowed.png)
+
 
 ## Dependencies
 

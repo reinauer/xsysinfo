@@ -58,9 +58,19 @@ static void update_software_list(void);
 
 void format_scaled(char *buffer, size_t size, ULONG value_x100)
 {
-    snprintf(buffer, size, "%lu.%02lu",
-             (unsigned long)(value_x100 / 100),
-             (unsigned long)(value_x100 % 100));
+    ULONG integer_part = value_x100 / 100;
+    ULONG frac_part = value_x100 % 100;
+    if (integer_part >= 100) {
+        /* Round up if fractional part >= 0.5 */
+        if (frac_part >= 50) {
+            integer_part++;
+        }
+        snprintf(buffer, size, "%lu", (unsigned long)integer_part);
+    } else {
+        snprintf(buffer, size, "%lu.%02lu",
+                 (unsigned long)integer_part,
+                 (unsigned long)frac_part);
+    }
 }
 
 void TightText(struct RastPort *rp, int x, int y, CONST_STRPTR str, int charGap, int spaceWidth)
@@ -1069,29 +1079,23 @@ static void draw_speed_panel(void)
     if (bench_results.benchmarks_valid) {
         char chip_str[8], fast_str[8], rom_str[8];
 
-        /* Format CHIP speed as X.XX */
+        /* Format CHIP speed in MB/s */
         if (bench_results.chip_speed > 0) {
-            ULONG mb = bench_results.chip_speed / 1000000;
-            ULONG frac = (bench_results.chip_speed % 1000000) / 10000;
-            snprintf(chip_str, sizeof(chip_str), "%lu.%02lu", (unsigned long)mb, (unsigned long)frac);
+            format_scaled(chip_str, sizeof(chip_str), bench_results.chip_speed / 10000);
         } else {
             snprintf(chip_str, sizeof(chip_str), "%s", get_string(MSG_NA));
         }
 
-        /* Format FAST speed as X.XX or N/A */
+        /* Format FAST speed in MB/s or N/A */
         if (bench_results.fast_speed > 0) {
-            ULONG mb = bench_results.fast_speed / 1000000;
-            ULONG frac = (bench_results.fast_speed % 1000000) / 10000;
-            snprintf(fast_str, sizeof(fast_str), "%lu.%02lu", (unsigned long)mb, (unsigned long)frac);
+            format_scaled(fast_str, sizeof(fast_str), bench_results.fast_speed / 10000);
         } else {
             snprintf(fast_str, sizeof(fast_str), "%s", get_string(MSG_NA));
         }
 
-        /* Format ROM speed as X.XX */
+        /* Format ROM speed in MB/s */
         if (bench_results.rom_speed > 0) {
-            ULONG mb = bench_results.rom_speed / 1000000;
-            ULONG frac = (bench_results.rom_speed % 1000000) / 10000;
-            snprintf(rom_str, sizeof(rom_str), "%lu.%02lu", (unsigned long)mb, (unsigned long)frac);
+            format_scaled(rom_str, sizeof(rom_str), bench_results.rom_speed / 10000);
         } else {
             snprintf(rom_str, sizeof(rom_str), "%s", get_string(MSG_NA));
         }

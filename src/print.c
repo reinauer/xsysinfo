@@ -248,25 +248,19 @@ void export_benchmarks(BPTR fh)
             char chip_str[16], fast_str[16], rom_str[16];
 
             if (bench_results.chip_speed > 0) {
-                ULONG mb = bench_results.chip_speed / 1000000;
-                ULONG frac = (bench_results.chip_speed % 1000000) / 10000;
-                snprintf(chip_str, sizeof(chip_str), "%lu.%02lu", (unsigned long)mb, (unsigned long)frac);
+                format_scaled(chip_str, sizeof(chip_str), bench_results.chip_speed / 10000);
             } else {
                 strncpy(chip_str, "N/A", sizeof(chip_str));
             }
 
             if (bench_results.fast_speed > 0) {
-                ULONG mb = bench_results.fast_speed / 1000000;
-                ULONG frac = (bench_results.fast_speed % 1000000) / 10000;
-                snprintf(fast_str, sizeof(fast_str), "%lu.%02lu", (unsigned long)mb, (unsigned long)frac);
+                format_scaled(fast_str, sizeof(fast_str), bench_results.fast_speed / 10000);
             } else {
                 strncpy(fast_str, "N/A", sizeof(fast_str));
             }
 
             if (bench_results.rom_speed > 0) {
-                ULONG mb = bench_results.rom_speed / 1000000;
-                ULONG frac = (bench_results.rom_speed % 1000000) / 10000;
-                snprintf(rom_str, sizeof(rom_str), "%lu.%02lu", (unsigned long)mb, (unsigned long)frac);
+                format_scaled(rom_str, sizeof(rom_str), bench_results.rom_speed / 10000);
             } else {
                 strncpy(rom_str, "N/A", sizeof(rom_str));
             }

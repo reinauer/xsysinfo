@@ -122,6 +122,7 @@ void redraw_current_view(void);
 /* Panel drawing helpers */
 void draw_panel(WORD x, WORD y, WORD w, WORD h, const char *title);
 void draw_button(Button *btn);
+void draw_cycle_button(Button *btn);
 void draw_3d_box(WORD x, WORD y, WORD w, WORD h, BOOL recessed);
 
 /* Text drawing helpers */

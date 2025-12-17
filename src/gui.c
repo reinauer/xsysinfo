@@ -48,6 +48,7 @@ int num_buttons = 0;
 static void draw_header(void);
 static void draw_software_panel(void);
 static void draw_speed_panel(void);
+static void refresh_speed_bars(void);
 static void draw_hardware_panel(void);
 static void draw_bottom_buttons(void);
 static void draw_cache_buttons(void);
@@ -159,6 +160,8 @@ void redraw_button(ButtonID id)
     } else if (id == BTN_SOFTWARE_DOWN) {
         draw_scroll_arrow(btn->x, btn->y, btn->width, btn->height,
                           FALSE, btn->pressed);
+    } else if (id == BTN_SOFTWARE_CYCLE || id == BTN_SCALE_TOGGLE) {
+        draw_cycle_button(btn);
     } else {
         draw_button(btn);
     }
@@ -276,7 +279,7 @@ void main_view_handle_button(ButtonID id)
         case BTN_SCALE_TOGGLE:
             app->bar_scale = (app->bar_scale == SCALE_SHRINK) ?
                              SCALE_EXPAND : SCALE_SHRINK;
-            redraw_current_view();
+            refresh_speed_bars();
             break;
 
         case BTN_ICACHE:
@@ -537,6 +540,67 @@ void draw_button(Button *btn)
 }
 
 /*
+ * Draw a cycle button (recessed with curly arrow icon)
+ * Used for Libraries/Devices/Resources and Shrink/Expand toggles
+ */
+void draw_cycle_button(Button *btn)
+{
+    struct RastPort *rp = app->rp;
+    WORD text_x, text_y;
+    WORD text_len;
+    WORD icon_x, icon_y;
+
+    if (!btn) return;
+
+    /* Button background - darker like an input field */
+    SetAPen(rp, COLOR_BACKGROUND);
+    RectFill(rp, btn->x, btn->y, btn->x + btn->width - 1, btn->y + btn->height - 1);
+
+    /* Recessed 3D border */
+    draw_3d_box(btn->x, btn->y, btn->width, btn->height, TRUE);
+
+    /* Draw curly arrow icon (circular arrow) on the left */
+    icon_x = btn->x + 5;
+    icon_y = btn->y + btn->height / 2;
+
+    SetAPen(rp, COLOR_TEXT);
+
+    /* Draw a small circular arrow (clockwise refresh icon) */
+    /* Arc part - draw as connected pixels forming a 3/4 circle */
+    WritePixel(rp, icon_x + 2, icon_y - 3);  /* Top */
+    WritePixel(rp, icon_x + 3, icon_y - 3);
+    WritePixel(rp, icon_x + 4, icon_y - 2);  /* Top-right curve */
+    WritePixel(rp, icon_x + 5, icon_y - 1);
+    WritePixel(rp, icon_x + 5, icon_y);      /* Right side */
+    WritePixel(rp, icon_x + 5, icon_y + 1);
+    WritePixel(rp, icon_x + 4, icon_y + 2);  /* Bottom-right curve */
+    WritePixel(rp, icon_x + 3, icon_y + 3);
+    WritePixel(rp, icon_x + 2, icon_y + 3);  /* Bottom */
+    WritePixel(rp, icon_x + 1, icon_y + 3);
+    WritePixel(rp, icon_x, icon_y + 2);      /* Bottom-left curve */
+    WritePixel(rp, icon_x - 1, icon_y + 1);
+    WritePixel(rp, icon_x - 1, icon_y);      /* Left side */
+
+    /* Arrow head pointing right at the gap (top-left area) */
+    WritePixel(rp, icon_x + 1, icon_y - 3);  /* Arrow head */
+    WritePixel(rp, icon_x, icon_y - 4);
+    WritePixel(rp, icon_x + 1, icon_y - 4);
+    WritePixel(rp, icon_x, icon_y - 2);
+
+    /* Label - left-aligned after the icon */
+    if (btn->label) {
+        text_len = strlen(btn->label);
+        text_x = btn->x + 14;  /* After icon */
+        text_y = btn->y + (btn->height + 6) / 2;
+
+        SetAPen(rp, btn->enabled ? COLOR_TEXT : COLOR_BUTTON_DARK);
+        SetBPen(rp, COLOR_BACKGROUND);
+        Move(rp, text_x, text_y);
+        Text(rp, (CONST_STRPTR)btn->label, text_len);
+    }
+}
+
+/*
  * Draw a scroll arrow button with triangle
  */
 void draw_scroll_arrow(WORD x, WORD y, WORD w, WORD h, BOOL up, BOOL pressed)
@@ -735,7 +799,7 @@ static void update_software_list(void)
                            app->software_type == SOFTWARE_DEVICES ?
                                get_string(MSG_DEVICES) :
                                get_string(MSG_RESOURCES);
-        draw_button(cycle_btn);
+        draw_cycle_button(cycle_btn);
     }
 
     /* Draw scroll arrows with triangles */
@@ -807,6 +871,10 @@ void draw_single_bar(WORD x, WORD y, ULONG value, ULONG max_value, WORD color)
     /* Draw border */
     draw_3d_box(x - 1, y - 1, SPEED_BAR_MAX_WIDTH + 2, SPEED_BAR_HEIGHT + 2, TRUE);
 
+    /* Clear bar interior */
+    SetAPen(rp, COLOR_PANEL_BG);
+    RectFill(rp, x, y, x + SPEED_BAR_MAX_WIDTH - 1, y + SPEED_BAR_HEIGHT - 1);
+
     if (max_value == 0 || value == 0) return;
 
     if (app->bar_scale == SCALE_EXPAND) {
@@ -860,6 +928,54 @@ void draw_single_bar(WORD x, WORD y, ULONG value, ULONG max_value, WORD color)
 }
 
 /*
+ * Refresh speed bars only (for scale toggle without full redraw)
+ */
+static void refresh_speed_bars(void)
+{
+    WORD y;
+    ULONG max_value, cur_value;
+    int i;
+
+    /* Update scale toggle button */
+    Button *scale_btn = find_button(BTN_SCALE_TOGGLE);
+    if (scale_btn) {
+        scale_btn->label = app->bar_scale == SCALE_SHRINK ?
+                           get_string(MSG_SHRINK) : get_string(MSG_EXPAND);
+        draw_cycle_button(scale_btn);
+    }
+
+    if (app->bar_scale == SCALE_EXPAND) {
+        max_value = get_max_dhrystones();
+    } else {
+        ULONG a4000_value = reference_systems[REF_A4000].dhrystones;
+        max_value = a4000_value ? a4000_value * 2 : 1;
+    }
+
+    /* Redraw "You" bar */
+    y = SPEED_PANEL_Y + 22;
+    if (bench_results.benchmarks_valid) {
+        cur_value = bench_results.dhrystones;
+    } else {
+        cur_value = 0;
+    }
+    draw_single_bar(SPEED_PANEL_X + 178, y - 5,
+                    cur_value, max_value, COLOR_BAR_YOU);
+
+    /* Redraw reference system bars */
+    y += 8;
+    for (i = 0; i < NUM_REFERENCE_SYSTEMS; i++) {
+        if (bench_results.benchmarks_valid) {
+            cur_value = reference_systems[i].dhrystones;
+        } else {
+            cur_value = 0;
+        }
+        draw_single_bar(SPEED_PANEL_X + 178, y - 5,
+                        cur_value, max_value, COLOR_BAR_FILL);
+        y += 8;
+    }
+}
+
+/*
  * Draw speed comparison panel
  */
 static void draw_speed_panel(void)
@@ -867,7 +983,6 @@ static void draw_speed_panel(void)
     struct RastPort *rp = app->rp;
     WORD y;
     char buffer[64];
-    ULONG max_value, cur_value;
     int i;
 
     draw_panel(SPEED_PANEL_X, SPEED_PANEL_Y,
@@ -875,17 +990,6 @@ static void draw_speed_panel(void)
 
     draw_panel(SPEED_PANEL_X + 1, SPEED_PANEL_Y + 1,
                SPEED_PANEL_W - 2, 14, get_string(MSG_SPEED_COMPARISONS));
-
-    /* Draw scale toggle button */
-    Button *scale_btn = find_button(BTN_SCALE_TOGGLE);
-    if (scale_btn) draw_button(scale_btn);
-
-    if (app->bar_scale == SCALE_EXPAND) {
-        max_value = get_max_dhrystones();  /* Scale to fastest known system */
-    } else {
-        ULONG a4000_value = reference_systems[REF_A4000].dhrystones;
-        max_value = a4000_value ? a4000_value * 2 : 1; /* A4000 at 50%, cap at ~2x */
-    }
 
     /* Draw "You" entry first */
     y = SPEED_PANEL_Y + 22;
@@ -904,15 +1008,7 @@ static void draw_speed_panel(void)
     Move(rp, SPEED_PANEL_X + 150, y);
     Text(rp, (CONST_STRPTR)get_string(MSG_REF_YOU), strlen(get_string(MSG_REF_YOU)));
 
-    if (bench_results.benchmarks_valid) {
-	cur_value = bench_results.dhrystones;
-    } else {
-	cur_value = 0;
-    }
-    draw_single_bar(SPEED_PANEL_X + 178, y - 5,
-                    cur_value, max_value, COLOR_BAR_YOU);
-
-    /* Draw reference systems */
+    /* Draw reference systems labels and speed factors */
     y += 8;
     for (i = 0; i < NUM_REFERENCE_SYSTEMS; i++) {
         char ref_label[24];
@@ -933,15 +1029,11 @@ static void draw_speed_panel(void)
             TightText(rp, SPEED_PANEL_X + 132, y, (CONST_STRPTR)factor_str, -1, 7);
         }
 
-	if (bench_results.benchmarks_valid) {
-            cur_value = reference_systems[i].dhrystones;
-	} else {
-	    cur_value = 0;
-        }
-        draw_single_bar(SPEED_PANEL_X + 178, y - 5,
-                        cur_value, max_value, COLOR_BAR_FILL);
         y += 8;
     }
+
+    /* Draw cycle button and all speed bars */
+    refresh_speed_bars();
 
     /* MIPS and MFLOPS */
     //y = SPEED_PANEL_Y + SPEED_PANEL_H - 18;
@@ -1113,14 +1205,14 @@ static void draw_hardware_panel(void)
         format_scaled(buffer, sizeof(buffer), (ULONG)horiz_khz);
     }
     draw_label_value(HARDWARE_PANEL_X + 4, y,
-                     get_string(MSG_HORIZ_KHZ), buffer, 96);
+                     get_string(MSG_HORIZ_KHZ), buffer, 90);
 
     y += 8;
 
     /* EClock */
     snprintf(buffer, sizeof(buffer), "%lu", (unsigned long)hw_info.eclock_freq);
     draw_label_value(HARDWARE_PANEL_X + 4, y,
-                     get_string(MSG_ECLOCK_HZ), buffer, 96);
+                     get_string(MSG_ECLOCK_HZ), buffer, 90);
 
     /* Right column - cache status labels (values drawn by draw_cache_status) */
     draw_label_value(HARDWARE_PANEL_X + 170, y,
@@ -1134,7 +1226,7 @@ static void draw_hardware_panel(void)
         strncpy(buffer, get_string(MSG_NA), sizeof(buffer) - 1);
     }
     draw_label_value(HARDWARE_PANEL_X + 4, y,
-                     get_string(MSG_RAMSEY_REV), buffer, 96);
+                     get_string(MSG_RAMSEY_REV), buffer, 90);
 
     draw_label_value(HARDWARE_PANEL_X + 170, y,
                      get_string(MSG_DCACHE), NULL, 64);
@@ -1147,7 +1239,7 @@ static void draw_hardware_panel(void)
         strncpy(buffer, get_string(MSG_NA), sizeof(buffer) - 1);
     }
     draw_label_value(HARDWARE_PANEL_X + 4, y,
-                     get_string(MSG_GARY_REV), buffer, 96);
+                     get_string(MSG_GARY_REV), buffer, 90);
 
     draw_label_value(HARDWARE_PANEL_X + 170, y,
                      get_string(MSG_IBURST), NULL, 64);
@@ -1155,7 +1247,7 @@ static void draw_hardware_panel(void)
 
     /* Card Slot */
     draw_label_value(HARDWARE_PANEL_X + 4, y,
-                     get_string(MSG_CARD_SLOT), hw_info.card_slot_string, 96);
+                     get_string(MSG_CARD_SLOT), hw_info.card_slot_string, 90);
 
     draw_label_value(HARDWARE_PANEL_X + 170, y,
                      get_string(MSG_DBURST), NULL, 64);
@@ -1164,7 +1256,7 @@ static void draw_hardware_panel(void)
     /* Vert Hz */
     snprintf(buffer, sizeof(buffer), "%lu", (unsigned long)hw_info.vert_freq);
     draw_label_value(HARDWARE_PANEL_X + 4, y,
-                     get_string(MSG_VERT_HZ), buffer, 96);
+                     get_string(MSG_VERT_HZ), buffer, 90);
 
     draw_label_value(HARDWARE_PANEL_X + 170, y,
                      get_string(MSG_CBACK), NULL, 64);
@@ -1173,7 +1265,7 @@ static void draw_hardware_panel(void)
     /* Supply Hz */
     snprintf(buffer, sizeof(buffer), "%lu", (unsigned long)hw_info.supply_freq);
     draw_label_value(HARDWARE_PANEL_X + 4, y,
-                     get_string(MSG_SUPPLY_HZ), buffer, 96);
+                     get_string(MSG_SUPPLY_HZ), buffer, 90);
 
     /* Draw cache status values */
     draw_cache_status();

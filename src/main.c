@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: BSD-2-Clause
+// SPDX-FileCopyrightText: 2025 Stefan Reinauer
+
 /*
  * xSysInfo - Main entry point and display management
  */

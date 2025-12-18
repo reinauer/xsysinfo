@@ -1,3 +1,6 @@
+; SPDX-License-Identifier: BSD-2-Clause
+; SPDX-FileCopyrightText: 2025 Stefan Reinauer
+
 ; TinySetPatch.S
 ; Tiny SetPatch replacement
 ; Implements: 680x0 Support, AGA Graphics, Data Cache

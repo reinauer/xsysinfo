@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: BSD-2-Clause
+# SPDX-FileCopyrightText: 2025 Stefan Reinauer
+#
 # xSysInfo Makefile for GCC (m68k-amigaos)
 
 ADATE   := $(shell date '+%-d.%-m.%Y')

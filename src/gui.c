@@ -204,7 +204,7 @@ void main_view_update_buttons(void)
                SOFTWARE_PANEL_Y + 15 + 10, 12, SOFTWARE_PANEL_H - 15 - 10 - 12,
                NULL, BTN_SOFTWARE_SCROLLBAR, TRUE);  /* Scroll bar */
     add_button(SOFTWARE_PANEL_X + SOFTWARE_PANEL_W - 14,
-               SOFTWARE_PANEL_Y + SOFTWARE_PANEL_H - 12 + 1, 12, 10,
+               SOFTWARE_PANEL_Y + SOFTWARE_PANEL_H - 12, 12, 10,
                NULL, BTN_SOFTWARE_DOWN, TRUE); /* Down arrow */
 
     /* Scale toggle button */
@@ -618,13 +618,14 @@ void draw_scroll_arrow(WORD x, WORD y, WORD w, WORD h, BOOL up, BOOL pressed)
 
     /* Calculate arrow center and size */
     cx = x + w / 2;
-    cy = y + h / 2;
+    cy = y + h / 2 - 1;
+
     arrow_h = (h - 4) / 2;  /* Arrow height */
     arrow_w = arrow_h;      /* Arrow width (half-width actually) */
 
     if (arrow_h < 2) arrow_h = 2;
     if (arrow_w < 2) arrow_w = 2;
-
+    
     /* Draw filled triangle */
     SetAPen(rp, COLOR_TEXT);
 

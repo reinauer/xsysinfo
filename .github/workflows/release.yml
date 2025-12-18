@@ -35,6 +35,7 @@ jobs:
           path: |
             xSysInfo
             xsysinfo-*.adf
+            xsysinfo-*.lha
           if-no-files-found: error
 
   release:
@@ -61,3 +62,4 @@ jobs:
           files: |
             artifacts/xSysInfo
             artifacts/xsysinfo-*.adf
+            artifacts/xsysinfo-*.lha

@@ -34,8 +34,18 @@ jobs:
       id: adf
       run: echo "filename=$(ls xsysinfo-*.adf)" >> $GITHUB_OUTPUT
 
+    - name: Find LHA filename
+      id: lha
+      run: echo "filename=$(ls xsysinfo-*.lha)" >> $GITHUB_OUTPUT
+
     - name: Archive CI artifacts (ADF)
       uses: actions/upload-artifact@v4
       with:
           name: ${{ steps.adf.outputs.filename }}
           path: ${{ github.workspace }}/${{ steps.adf.outputs.filename }}
+
+    - name: Archive CI artifacts (LHA)
+      uses: actions/upload-artifact@v4
+      with:
+          name: ${{ steps.lha.outputs.filename }}
+          path: ${{ github.workspace }}/${{ steps.lha.outputs.filename }}

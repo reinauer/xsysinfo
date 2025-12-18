@@ -50,7 +50,7 @@ OBJS = $(SRCS:.c=.o)
 
 TARGET = xSysInfo
 
-.PHONY: all clean identify catalogs
+.PHONY: all clean identify catalogs lha
 
 # Detect platform for flexcat binary path
 UNAME_S := $(shell uname -s)
@@ -60,7 +60,7 @@ else
     FLEXCAT_BIN = 3rdparty/flexcat/src/bin_unix/flexcat
 endif
 
-all: identify $(TARGET) disk
+all: identify $(TARGET) disk lha
 
 # FlexCat build - only when binary doesn't exist
 $(FLEXCAT_BIN):
@@ -92,6 +92,28 @@ catalogs: $(FLEXCAT_BIN)
 		$(FLEXCAT_BIN) $(CATALOG_DESC) "catalogs/$$src/xSysInfo.ct" CATALOG "$(CATALOG_DIR)/$$lang/xSysInfo.catalog"; \
 	done
 
+# LHA archive creation
+LHA_NAME = xsysinfo-$(FULL_VERSION).lha
+LHA_DIR = xSysInfo-$(FULL_VERSION)
+LHA_OPTS := $(shell if lha 2>&1 | grep 'archive-kanji-code' | grep -q 'latin1'; then echo '--system-kanji-code=utf8 --archive-kanji-code=latin1'; fi)
+
+lha: $(TARGET) TinySetPatch catalogs
+	@echo "  LHA   $(LHA_NAME)"
+	@rm -rf $(LHA_DIR)
+	@mkdir -p $(LHA_DIR)
+	@cp $(TARGET) $(LHA_DIR)/
+	@cp TinySetPatch $(LHA_DIR)/
+	@cp docs/readme.txt $(LHA_DIR)/
+	@cp docs/xSysInfo.info $(LHA_DIR)/
+	@cp LICENSE $(LHA_DIR)/
+	@for catalog in $(CATALOG_DIR)/*/xSysInfo.catalog; do \
+		lang=$$(basename $$(dirname "$$catalog")); \
+		cp "$$catalog" "$(LHA_DIR)/xSysInfo_$$lang.catalog"; \
+	done
+	@lha aqo5 $(LHA_OPTS) $(LHA_NAME) $(LHA_DIR)
+	@rm -rf $(LHA_DIR)
+	@echo "Created $(LHA_NAME)"
+
 $(TARGET): $(OBJS)
 	@echo "  LINK  $@"
 	@$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
@@ -107,6 +129,7 @@ clean:
 	@echo "  CLEAN"
 	@rm -f $(OBJS) $(TARGET) TinySetPatch
 	@rm -rf $(CATALOG_DIR)
+	@rm -f xsysinfo-*.lha
 	@$(MAKE) -s -C 3rdparty/flexcat clean
 	@$(MAKE) -s -C 3rdparty/identify clean
 

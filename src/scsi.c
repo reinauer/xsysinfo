@@ -220,9 +220,11 @@ BOOL check_scsi_direct_support(const char *handler_name, ULONG unit_number)
 /*
  * Send SCSI INQUIRY command to a device
  */
-static BOOL scsi_inquiry(struct IOStdReq *io, int target, int lun,
+static BOOL scsi_inquiry(int target, int lun,
                          struct SCSIInquiryData *inquiry_data)
 {
+    struct IOStdReq *io;
+    struct MsgPort *mp;
     struct SCSICmd scsi_cmd;
     UBYTE cmd[6];
     UBYTE sense_data[20];
@@ -234,13 +236,17 @@ static BOOL scsi_inquiry(struct IOStdReq *io, int target, int lun,
     memset(sense_data, 0, sizeof(sense_data));
     memset(inquiry_data, 0, sizeof(struct SCSIInquiryData));
 
+
+    if ((mp = CreateMsgPort()) == NULL) return FALSE;
+
+    if ((io = CreateIORequest(mp,sizeof(struct IOStdReq))) == NULL) {
+        DeleteMsgPort(mp);
+        return FALSE;
+    }
+
     /* Calculate unit number for this target/LUN */
     unit = calculate_unit_number(target, lun);
 
-    /* Close and reopen device with correct unit */
-    CloseDevice((struct IORequest *)io);
-    /* uaehf.device needs a delay between closing and opening again */
-    WaitTOF();
     error = OpenDevice((CONST_STRPTR)scsi_device_list.device_name, unit,
                        (struct IORequest *)io, 0);
     if (error != 0) {
@@ -248,6 +254,8 @@ static BOOL scsi_inquiry(struct IOStdReq *io, int target, int lun,
         error = OpenDevice((CONST_STRPTR)scsi_device_list.device_name, 0,
                            (struct IORequest *)io, 0);
         if (error != 0) {
+            DeleteIORequest((struct IORequest *)io);
+            DeleteMsgPort(mp);
             return FALSE;
         }
     }
@@ -274,6 +282,10 @@ static BOOL scsi_inquiry(struct IOStdReq *io, int target, int lun,
 
     error = DoIO((struct IORequest *)io);
 
+    CloseDevice((struct IORequest *)io);
+    DeleteIORequest((struct IORequest *)io);
+    DeleteMsgPort(mp);
+
     if (error != 0 || scsi_cmd.scsi_Status != 0) {
         return FALSE;
     }
@@ -284,15 +296,24 @@ static BOOL scsi_inquiry(struct IOStdReq *io, int target, int lun,
 /*
  * Send SCSI READ CAPACITY command to a device
  */
-static BOOL scsi_read_capacity(struct IOStdReq *io, int target, int lun,
+static BOOL scsi_read_capacity(int target, int lun,
                                struct SCSICapacityData *capacity_data)
 {
+    struct IOStdReq *io;
+    struct MsgPort *mp;
     struct SCSICmd scsi_cmd;
     UBYTE cmd[10];
     UBYTE sense_data[20];
     UBYTE data[8];
     BYTE error;
     ULONG unit;
+
+    if ((mp = CreateMsgPort()) == NULL) return FALSE;
+
+    if ((io = CreateIORequest(mp,sizeof(struct IOStdReq))) == NULL) {
+        DeleteMsgPort(mp);
+        return FALSE;
+    }
 
     memset(&scsi_cmd, 0, sizeof(scsi_cmd));
     memset(cmd, 0, sizeof(cmd));
@@ -302,13 +323,12 @@ static BOOL scsi_read_capacity(struct IOStdReq *io, int target, int lun,
     /* Calculate unit number for this target/LUN */
     unit = calculate_unit_number(target, lun);
 
-    /* Close and reopen device with correct unit */
-    CloseDevice((struct IORequest *)io);
-    /* uaehf.device needs a delay between closing and opening again */
-    WaitTOF();
     error = OpenDevice((CONST_STRPTR)scsi_device_list.device_name, unit,
                        (struct IORequest *)io, 0);
+
     if (error != 0) {
+        DeleteIORequest((struct IORequest *)io);
+        DeleteMsgPort(mp);
         return FALSE;
     }
 
@@ -330,6 +350,10 @@ static BOOL scsi_read_capacity(struct IOStdReq *io, int target, int lun,
     io->io_Length = sizeof(struct SCSICmd);
 
     error = DoIO((struct IORequest *)io);
+
+    CloseDevice((struct IORequest *)io);
+    DeleteIORequest((struct IORequest *)io);
+    DeleteMsgPort(mp);
 
     if (error != 0 || scsi_cmd.scsi_Status != 0) {
         return FALSE;
@@ -404,7 +428,7 @@ void scan_scsi_devices(const char *handler_name, ULONG base_unit)
             }
 
             /* Try INQUIRY command */
-            if (scsi_inquiry(io, target, lun, &inquiry_data)) {
+            if (scsi_inquiry(target, lun, &inquiry_data)) {
                 /* Check if device is present (not 0x7F = no device) */
                 if ((inquiry_data.device_type & 0x1F) != 0x1F) {
                     ScsiDeviceInfo *dev = &scsi_device_list.devices[scsi_device_list.count];
@@ -428,7 +452,7 @@ void scan_scsi_devices(const char *handler_name, ULONG base_unit)
                     trim_trailing_spaces(dev->revision);
 
                     /* Try to get capacity info */
-                    if (scsi_read_capacity(io, target, lun, &capacity_data)) {
+                    if (scsi_read_capacity(target, lun, &capacity_data)) {
                         dev->max_blocks = capacity_data.last_block;
                         dev->block_size = capacity_data.block_size;
 
